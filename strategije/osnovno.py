@@ -4,7 +4,7 @@ import pandas as pd
 class OsnovnaStrategija(ABC):
     
     def __init__(self, ime:str= "OsnovnaStrategija"):
-        self.ime = ime
+        self.ime= ime
     
     @abstractmethod
     def generiraj_signale(self, df: pd.DataFrame) -> pd.DataFrame:
