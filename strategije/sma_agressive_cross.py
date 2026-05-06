@@ -9,7 +9,7 @@ class SMA_agressivecross(OsnovnaStrategija):
     Logika: ko se kratko povprečje cene povzdigne nad dolgo povprečje BUY signal,
             Obratno SELL signal  
     """
-    def __init__(self, kratko_avg: int, dolgo_avg: int):
+    def __init__(self, kratko_avg: int, dolgo_avg: int, **kwargs):
 
         super().__init__(ime= f"SMA({kratko_avg}/{dolgo_avg})")
         self.kratko_avg= kratko_avg
