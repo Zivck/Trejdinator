@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from strategije.osnovno import OsnovnaStrategija
 
 class BacktestMasina:

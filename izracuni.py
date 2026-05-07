@@ -5,19 +5,24 @@ def izracunaj_metrike(stanje_cez_cas: pd.Series, dnevni_profit: pd.Series, obres
     if len(dnevni_profit) == 0:
         return prazne_metrike()
     
+    if len(dnevni_profit) == 0 or len(stanje_cez_cas) < 2:
+        return prazne_metrike()
+    
     dnevni_profit=dnevni_profit.dropna()#izbriše Nan vrednosti
-
+    stanje_cez_cas=stanje_cez_cas.dropna()
+    
     izkupiček= stanje_cez_cas.iloc[-1]/ stanje_cez_cas.iloc[0]- 1
 
     leta=len(stanje_cez_cas)/ 365
     izkupiček_v_1y= (stanje_cez_cas.iloc[-1]/ stanje_cez_cas.iloc[0])** (1/leta)- 1 
-    volatilnost_v_1y= dnevni_profit.std()* np.sqrt(365) #std() gre čez elemente in vrne povprečno razliko med elementi
-    sharpe_razmerje= (izkupiček_v_1y- obresti_brez_riska)/ volatilnost_v_1y
+    volatilnost_v_1y= dnevni_profit.std()* np.sqrt(365) #std() gre čez elemente in vrne povprečno razliko med elemennti
+
+    sharpe_razmerje= (izkupiček_v_1y- obresti_brez_riska)/ volatilnost_v_1y if volatilnost_v_1y > 0 else 0.0
 
     neg_profit= dnevni_profit[dnevni_profit < 0]
     if len(neg_profit) > 0 and neg_profit.std() > 0:
         neg_profit_delta= neg_profit.std()
-        sortino_razmerje= (izkupiček_v_1y - obresti_brez_riska) / neg_profit_delta #Isto kot sharpe samo da ko gre market gor ne odbija
+        sortino_razmerje= (izkupiček_v_1y - obresti_brez_riska) / neg_profit_delta if neg_profit_delta > 0 else 0.0 #Isto kot sharpe samo da ko gre market gor ne odbija
     else:
         sortino_razmerje= 0.0
 
@@ -25,15 +30,15 @@ def izracunaj_metrike(stanje_cez_cas: pd.Series, dnevni_profit: pd.Series, obres
     padec= stanje_cez_cas/ tekoci_max -1 #trenutni padec od zadnjega vrha
     padec_max= padec.min() #največji padec
 
-    donos_na_padec= izkupiček_v_1y/ abs(padec_max)
+    donos_na_padec= izkupiček_v_1y/ abs(padec_max) if padec_max != 0 else 0.0
 
     P_dnevi= (dnevni_profit>0).sum() #(dnevni_profit>0) tole vrne True in false oz 1 in 0
     dnevi=len(dnevni_profit)
     win_rate= P_dnevi/dnevi
 
     profiti= dnevni_profit[dnevni_profit > 0].sum()
-    izgube= dnevni_profit[dnevni_profit < 0].sum()
-    profit_razmrje= profiti/izgube
+    izgube= abs(dnevni_profit[dnevni_profit < 0].sum())
+    profit_razmrje= profiti/izgube if izgube > 0 else (999.0 if profiti > 0 else 0.0)
 
     return {
         'total_return': round(izkupiček, 4),           

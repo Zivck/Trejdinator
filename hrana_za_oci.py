@@ -5,124 +5,115 @@ from plotly.subplots import make_subplots
 def vizualiziraj_rezultate(rezultati):
     """
     Ustvari interaktivni graf z dvema podgrafoma:
-    1. Gibanje cene delnice + signali za nakup/prodajo
+    1. Cena (Candlestick) s signali za nakup/prodajo (zamaknjeni, da se ne prekrivajo)
     2. Rast portfelja (Equity Curve)
     """
-    
-    # Pridobimo DataFrame iz rezultatov backtesta
     df = rezultati['podatki']
     
-    # 1. PRIPRAVA PODGRAFOV (2 vrstici, 1 stolpec)
-    # shared_xaxes=True pomeni, da se datumi na spodnjem grafu 
-    # ujemajo z zgornjim (ko zumiraš enega, zumiraš oba).
+    # 1. PRIPRAVA PODGRAFOV
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.03,  # Majhen razmik med grafoma
-        row_heights=[0.6, 0.4], # Zgornji graf je malo višji
-        subplot_titles=('Cena delnice & Signali', 'Rast portfelja (Equity)')
+        vertical_spacing=0.03,
+        row_heights=[0.6, 0.4],
+        subplot_titles=('Cena (Candlestick) & Signali', 'Rast portfelja (Equity)')
     )
 
     # =========================================================================
-    # GRAF 1: CENA DELNICE (Zgornji del)
+    # GRAF 1: CANDLESTICK CHART
     # =========================================================================
-    
-    # Dodamo črto za zapiralno ceno (Close)
     fig.add_trace(
-        go.Scatter(
-            x=df.index,          # Datum na X osi
-            y=df['Close'],       # Cena na Y osi
-            name='Zapiralna cena',
-            line=dict(color='blue', width=2)
-        ),
-        row=1, col=1
-    )
-
-    # Filtriramo trenutke, ko je SIGNAL = 1.0 (Nakup)
-    # To so točke, kjer strategija svetuje nakup
-    nakupi = df[df['signal'] == 1.0]
-    
-    # Dodamo zelene trikotnike za signale nakupa
-    fig.add_trace(
-        go.Scatter(
-            x=nakupi.index,
-            y=nakupi['Close'],
-            mode='markers',
-            name='Signal: KUPI',
-            marker=dict(
-                symbol='triangle-up',  # Simbol: trikotnik gor
-                size=12,
-                color='green'
-            )
-        ),
-        row=1, col=1
-    )
-
-    # Filtriramo trenutke, ko je SIGNAL = 0.0 (Izhod/Prodaja)
-    # V naši strategiji je 0.0 pomenilo 'flat' (brez pozicije)
-    izhodi = df[df['signal'] == 0.0]
-    
-    # Dodamo rdeče trikotnike za signale izhoda
-    fig.add_trace(
-        go.Scatter(
-            x=izhodi.index,
-            y=izhodi['Close'],
-            mode='markers',
-            name='Signal: PRODAJ/IZHOD',
-            marker=dict(
-                symbol='triangle-down', # Simbol: trikotnik dol
-                size=12,
-                color='red'
-            )
-        ),
-        row=1, col=1
-    )
-
-    # =========================================================================
-    # GRAF 2: EQUITY CURVE (Spodnji del)
-    # =========================================================================
-    
-    # Dodamo črto rasti računa
-    fig.add_trace(
-        go.Scatter(
+        go.Candlestick(
             x=df.index,
-            y=df['stanje'],
-            name='Stanje računa',
-            line=dict(color='green', width=2),
-            fill='tozeroy' # Zapolni prostor pod črto do osi X
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close'],
+            name='Cena',
+            increasing_line_color='cyan',
+            decreasing_line_color='orange'
         ),
-        row=2, col=1
+        row=1, col=1
     )
+
+    # =========================================================================
+    # DETEKCIJA PREHODOV
+    # =========================================================================
+    # Zagotovimo, da so signali števila (float)
+    df['signal'] = df['signal'].astype(float)
+    df['prev_signal'] = df['signal'].shift(1).fillna(0.0)
+
+    # LONG: vstop (pozicija postane 1), izhod (pozicija pade iz 1)
+    long_vstop = df[(df['signal'] == 1.0) & (df['prev_signal'] != 1.0)]
+    long_izhod = df[(df['signal'] != 1.0) & (df['prev_signal'] == 1.0)]
+
+    # SHORT: vstop (pozicija postane -1), izhod (pozicija naraste iz -1)
+    short_vstop = df[(df['signal'] == -1.0) & (df['prev_signal'] != -1.0)]
+    short_izhod = df[(df['signal'] != -1.0) & (df['prev_signal'] == -1.0)]
+
+    # =========================================================================
+    # DODAJANJE MARKERJEV Z VERTIKALNIM ODMIKOM (OFFSET)
+    # =========================================================================
     
-    # Dodamo črtkano črto za začetni kapital (referenčna točka)
-    fig.add_hline(
-        y=rezultati['koncno_stanje'] / (1 + df['P/L'].iloc[0]), # Približek začetnega
-        line_dash="dash", 
-        line_color="gray",
-        annotation_text="Začetni kapital",
+    # LONG signali (Zeleni) -> Postavljeni MALO POD ceno (y * 0.99)
+    if len(long_vstop) > 0:
+        fig.add_trace(
+            go.Scatter(x=long_vstop.index, y=long_vstop['Close'] * 0.99, mode='markers',
+                       marker=dict(symbol='triangle-up', size=12, color='green'),
+                       name='LONG Vstop', showlegend=True),
+            row=1, col=1
+        )
+    if len(long_izhod) > 0:
+        fig.add_trace(
+            go.Scatter(x=long_izhod.index, y=long_izhod['Close'] * 0.99, mode='markers',
+                       marker=dict(symbol='triangle-down', size=12, color='green'),
+                       name='LONG Izhod', showlegend=True),
+            row=1, col=1
+        )
+
+    # SHORT signali (Rdeči) -> Postavljeni MALO NAD ceno (y * 1.01)
+    if len(short_vstop) > 0:
+        fig.add_trace(
+            go.Scatter(x=short_vstop.index, y=short_vstop['Close'] * 1.01, mode='markers',
+                       marker=dict(symbol='triangle-down', size=12, color='red'),
+                       name='SHORT Vstop', showlegend=True),
+            row=1, col=1
+        )
+    if len(short_izhod) > 0:
+        fig.add_trace(
+            go.Scatter(x=short_izhod.index, y=short_izhod['Close'] * 1.01, mode='markers',
+                       marker=dict(symbol='triangle-up', size=12, color='red'),
+                       name='SHORT Izhod', showlegend=True),
+            row=1, col=1
+        )
+
+    # =========================================================================
+    # GRAF 2: EQUITY CURVE
+    # =========================================================================
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, y=df['stanje'],
+            name='Stanje računa',
+            line=dict(color='blue', width=2),
+            fill='tozeroy', fillcolor='rgba(0,0,255,0.1)'
+        ),
         row=2, col=1
     )
 
     # =========================================================================
-    # UREJANJE IZGLEDA (LAYOUT)
+    # LAYOUT
     # =========================================================================
-    
     fig.update_layout(
-        title={
-            'text': "Rezultati Backtesta",
-            'y': 0.95,
-            'x': 0.5,
-            'xanchor': 'center'
-        },
-        height=800,         # Višina grafa v slikovnih pikah
-        template='plotly_white', # Čist, bel dizajn
-        hovermode='x unified'    # KLJUČNO: Prikaži info za vse grafe naenkrat na določen datum
+        title={'text': "Rezultati Backtesta", 'y': 0.95, 'x': 0.5, 'xanchor': 'center'},
+        height=800,
+        template='plotly_white',
+        hovermode='x unified',
+        xaxis_rangeslider_visible=False,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     
-    # Imena osi
     fig.update_yaxes(title_text="Cena ($)", row=1, col=1)
     fig.update_yaxes(title_text="Stanje ($)", row=2, col=1)
     fig.update_xaxes(title_text="Datum", row=2, col=1)
 
-    # PRIKAŽI GRAF V BRSKALNIKU
     fig.show()
