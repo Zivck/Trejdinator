@@ -84,7 +84,7 @@ def main():
     parser.add_argument("--zacetek", type=str, default=None)
     #Dodatni parametri
     parser.add_argument("--limit", type=int, default=1000)
-    parser.add_argument("--kapital", type=float, default=100000)
+    parser.add_argument("--kapital", type=float, default=10000)
     parser.add_argument("--provizija", type=float, default=0.001)
     parser.add_argument("--brez-grafa", action="store_true")
     
