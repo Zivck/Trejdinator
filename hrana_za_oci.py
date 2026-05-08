@@ -94,8 +94,8 @@ def vizualiziraj_rezultate(rezultati):
         go.Scatter(
             x=df.index, y=df['stanje'],
             name='Stanje računa',
-            line=dict(color='blue', width=2),
-            fill='tozeroy', fillcolor='rgba(0,0,255,0.1)'
+            line=dict(color='green', width=2),
+            fill='tonextx', fillcolor='rgba(0,0,255,0.1)'
         ),
         row=2, col=1
     )

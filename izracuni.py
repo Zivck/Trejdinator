@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 
-def izracunaj_metrike(stanje_cez_cas: pd.Series, dnevni_profit: pd.Series, obresti_brez_riska: float= 0.2)-> dict:
-    if len(dnevni_profit) == 0:
+def izracunaj_metrike(stanje_cez_cas: pd.Series, dnevni_profit: pd.Series, obresti_brez_riska: float= 0.02)-> dict:
+    if len(dnevni_profit)== 0:
         return prazne_metrike()
     
     if len(dnevni_profit) == 0 or len(stanje_cez_cas) < 2:
