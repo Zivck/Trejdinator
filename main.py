@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--kratki", type=int, default=20)
     parser.add_argument("--dolgi", type=int, default=50)
     parser.add_argument("--perioda", type=int, default=14)
-    #Obvezni parametri
+    
     parser.add_argument("--simbol", type=str, default="BTC/USDT")
     parser.add_argument("--borza", type=str, default="binance")
     parser.add_argument("--timeframe", type=str, default="1d")
