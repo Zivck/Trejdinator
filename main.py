@@ -73,25 +73,55 @@ def izpisi_metrike(metrike: dict):
 def main():
     parser = argparse.ArgumentParser(description="TREJDINATOR")
     parser.add_argument("--strategija", type=str, required=True, help="Ime datoteke v mapi strategije/ (npr. sma_crossover, rsi, macd)")
-    # Parametri, ki jih lahko uporabijo različne strategije
-    parser.add_argument("--kratki", type=int, default=20)
-    parser.add_argument("--dolgi", type=int, default=50)
-    parser.add_argument("--perioda", type=int, default=14)
+    #osniovni parametri
     
     parser.add_argument("--simbol", type=str, default="BTC/USDT")
     parser.add_argument("--borza", type=str, default="binance")
     parser.add_argument("--timeframe", type=str, default="1d")
     parser.add_argument("--zacetek", type=str, default=None)
-    #Dodatni parametri
     parser.add_argument("--limit", type=int, default=1000)
+
     parser.add_argument("--kapital", type=float, default=10000)
     parser.add_argument("--provizija", type=float, default=0.001)
+    #sma crossover
+    parser.add_argument("--kratko_avg", type=int, default=20,help="Kratki SMA/EMA period (za sma_crossover)")
+    parser.add_argument("--dolgo_avg", type=int, default=50, help="Dolgi SMA/EMA period (za sma_crossover)")
+    #ema_crossover
+    parser.add_argument("--hitro", type=int, default=12,help="Fast EMA period (za ema_crossover)")
+    parser.add_argument("--pocasno", type=int, default=26,help="Slow EMA period (za ema_crossover)")
+    #STOCHASTIC
+    parser.add_argument("--k_perioda", type=int, default=14, help="K perioda za Stochastic")
+    parser.add_argument("--d_perioda", type=int, default=3, help="D perioda za Stochastic")
+    #donchain
+    parser.add_argument("--window", type=int, default=20, help="Window size za Donchian Channel")
+    #rsi_ema
+    parser.add_argument("--ema_trend", type=int, default=50,help="Dolgoročni EMA za trend filter")
+    parser.add_argument("--ema_entry", type=int, default=20,help="Kratkoročni EMA za entry filter")
+    parser.add_argument("--rsi_perioda", type=int, default=14,help="RSI period (za rsi in rsi_ema_filter)")
+    parser.add_argument("--oversold", type=float, default=30.0,help="Oversold prag (za rsi, stochastic, rsi_ema_filter)")
+    parser.add_argument("--perioda", type=int, default=14)
+
     parser.add_argument("--brez-grafa", action="store_true")
     
     args = parser.parse_args()    
+    
+    params = {
+    'rsi_perioda': args.rsi_perioda,
+    'ema_trend': args.ema_trend,
+    'ema_entry': args.ema_entry,
+    'oversold': args.oversold,
+    'k_perioda': args.k_perioda,
+    'd_perioda': args.d_perioda,
+    'hitro': args.hitro,
+    'pocasno': args.pocasno,
+    'kratko_avg': args.kratko_avg,
+    'dolgo_avg': args.dolgo_avg,
+    'window': args.window,
+    'perioda': args.rsi_perioda,  # Za združljivost
+}
 
     df=nalozi_podatke(args.simbol, args.borza, args.timeframe, args.zacetek, args.limit)
-    strategija = nalozi_strategijo( args.strategija, kratko_avg=args.kratki, dolgo_avg=args.dolgi, perioda=args.perioda)
+    strategija = nalozi_strategijo(args.strategija, **params)
 
     motor = BacktestMasina(df, strategija, args.kapital, args.provizija)
     rezultati = motor.zaženi()
